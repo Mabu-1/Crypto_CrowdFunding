@@ -7,10 +7,11 @@ import Loader from "./Loader";
 const CampaignList = () => {
   const [campaigns, setCampaigns] = useState([]);
   const navigate = useNavigate();
+  const [loadingDelete, setLoadingDelete] = useState({}); // Track delete loading per campaign
 
   const [loading, setLoading] = useState(true);
   const [loadingCampaigns, setLoadingCampaigns] = useState({});
-  const [loadingDelete, setLoadingDelete] = useState(false); // For delete operation
+
   const [error, setError] = useState("");
   const [donationAmounts, setDonationAmounts] = useState({});
 
@@ -35,6 +36,9 @@ const CampaignList = () => {
       const onChainCampaigns = await contract.getActiveCampaigns();
       const campaignsWithData = await Promise.all(
         onChainCampaigns.map(async (campaign, index) => {
+          // Explicitly check if each campaign is active and fetch its IPFS data
+          if (!campaign.isActive) return null; // Skip inactive campaigns
+
           const metaData = Object.values(campaign)[1];
           const ipfsData = await fetchIPFSData(metaData);
           return {
@@ -56,7 +60,10 @@ const CampaignList = () => {
         })
       );
 
-      setCampaigns(campaignsWithData.filter((campaign) => campaign.isActive));
+      // Filter out null or inactive campaigns in the final setCampaigns call
+      setCampaigns(
+        campaignsWithData.filter((campaign) => campaign && campaign.isActive)
+      );
     } catch (err) {
       console.error("Error fetching campaigns:", err);
       setError(err.message || "Failed to fetch campaigns");
@@ -86,24 +93,26 @@ const CampaignList = () => {
   };
 
   const handleDelete = async (campaignId) => {
-    if (!window.confirm("Are you sure you want to delete this campaign?"))
+    if (!window.confirm("Are you sure you want to deactivate this campaign?"))
       return;
 
     try {
-      setLoadingDelete(true);
+      // Set loading for the specific campaign ID
+      setLoadingDelete((prev) => ({ ...prev, [campaignId]: true }));
       const contract = await getContract();
       if (!contract) throw new Error("Failed to load contract");
 
       const tx = await contract.deleteCampaign(campaignId);
       await tx.wait();
 
-      // Refresh the campaign list after deletion
+      // Refresh the campaign list after deactivation
       getAllCampaigns();
     } catch (err) {
-      console.error("Error deleting campaign:", err);
-      alert(err.message || "Failed to delete campaign");
+      console.error("Error deactivating campaign:", err);
+      alert(err.message || "Failed to deactivate campaign");
     } finally {
-      setLoadingDelete(false);
+      // Set loading to false for the specific campaign ID
+      setLoadingDelete((prev) => ({ ...prev, [campaignId]: false }));
     }
   };
 
@@ -248,7 +257,9 @@ const CampaignList = () => {
                           onClick={() => handleDelete(campaign.id)}
                           className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
                         >
-                          {loadingDelete ? "Deleting..." : "Delete"}
+                          {loadingDelete[campaign.id]
+                            ? "Deleting..."
+                            : "Delete"}
                         </button>
                       </div>
                     )}

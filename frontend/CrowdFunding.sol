@@ -3,14 +3,14 @@ pragma solidity ^0.8.20;
 
 contract CrowdFunding {
     enum CampaignCategory {
-        MEDICAL_TREATMENT,    
-        DISASTER_RELIEF,      
-        EDUCATION,           
-        STARTUP_BUSINESS,    
-        CREATIVE_PROJECTS,   
-        COMMUNITY_SERVICE,   
-        TECHNOLOGY,          
-        ENVIRONMENTAL       
+        MEDICAL_TREATMENT,
+        DISASTER_RELIEF,
+        EDUCATION,
+        STARTUP_BUSINESS,
+        CREATIVE_PROJECTS,
+        COMMUNITY_SERVICE,
+        TECHNOLOGY,
+        ENVIRONMENTAL
     }
 
     struct Campaign {
@@ -39,7 +39,9 @@ contract CrowdFunding {
 
     event CampaignUpdated(
         uint256 id,
-        string metadataHash
+        string newMetadataHash,
+        uint256 newTarget,
+        uint256 newDeadline
     );
 
     event CampaignDeleted(uint256 id);
@@ -89,18 +91,25 @@ contract CrowdFunding {
         return campaignCount - 1;
     }
 
-    // Update campaign metadata
+    // Update campaign metadata and other details
     function updateCampaign(
         uint256 _id,
-        string memory _newMetadataHash
+        string memory _newMetadataHash,
+        uint256 _newTarget,
+        uint256 _newDeadline
     ) public {
         Campaign storage campaign = campaigns[_id];
         require(msg.sender == campaign.owner, "Only owner can update the campaign");
         require(campaign.isActive, "Cannot update an inactive campaign");
+        require(_newDeadline > block.timestamp, "New deadline must be in the future");
+        require(_newTarget > 0, "Target amount must be greater than 0");
 
+        // Update campaign fields
         campaign.metadataHash = _newMetadataHash;
+        campaign.target = _newTarget;
+        campaign.deadline = _newDeadline;
 
-        emit CampaignUpdated(_id, _newMetadataHash);
+        emit CampaignUpdated(_id, _newMetadataHash, _newTarget, _newDeadline);
     }
 
     // Soft delete a campaign

@@ -15,8 +15,7 @@ const UpdateCampaign = () => {
     description: campaignData.description || "",
     target: campaignData.target || "",
     image: campaignData.image || "",
-    deadline:
-      new Date(campaignData.deadline * 1000).toISOString().split("T")[0] || "",
+    deadline: new Date(campaignData.deadline).toISOString().split("T")[0] || "",
   });
 
   const [loading, setLoading] = useState(false);
@@ -35,13 +34,13 @@ const UpdateCampaign = () => {
       if (!contract) throw new Error("Failed to load contract");
 
       // Handle image upload/URL
-      let finalImageUrl = formData.image; // Use existing image URL by default
+      let finalImageUrl = formData.image;
       if (imageMethod === "upload" && image) {
         const imageUpload = await uploadToIPFS(image);
         if (!imageUpload || !imageUpload.url) {
           throw new Error("Failed to upload image");
         }
-        finalImageUrl = imageUpload.url; // New image URL from upload
+        finalImageUrl = imageUpload.url;
       }
 
       // Create metadata object
@@ -51,12 +50,10 @@ const UpdateCampaign = () => {
         image: finalImageUrl,
       };
 
-      // Create a Blob from metadata
+      // Upload metadata to IPFS
       const metadataBlob = new Blob([JSON.stringify(metadata)], {
         type: "application/json",
       });
-
-      // Upload metadata to IPFS
       const metadataUpload = await uploadToIPFS(metadataBlob);
       if (!metadataUpload || !metadataUpload.url) {
         throw new Error("Failed to upload metadata");
